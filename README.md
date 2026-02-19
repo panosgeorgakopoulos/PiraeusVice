@@ -1,7 +1,3 @@
-Here is a complete, well-structured `README.md` file for your repository based on the provided script and the implied project structure.
-
----
-
 # Piraeus Vice: Crime Classification & Killer Identification
 
 ## 📌 Project Overview
