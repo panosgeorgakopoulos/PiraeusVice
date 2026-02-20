@@ -12,7 +12,7 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{enumitem}
-\usepackage{titlesec}
+\usepackage[explicit]{titlesec} % Fixed: Added [explicit] to interpret #1 correctly
 \usepackage{fancyhdr}
 \usepackage{microtype}
 \usepackage{caption}
@@ -115,8 +115,7 @@
       discriminative linear and non-linear classifiers (Q4--Q6), dimensionality reduction
       (Q7), and unsupervised clustering (Q8). The best supervised model (Logistic Regression)
       achieves \textbf{94.1\%} validation accuracy. All code, figures, and the final
-      \texttt{submission.csv} are provided alongside this report.
-      \vspace{0.5em}
+      \texttt{submission.csv} are provided alongside this report. \vspace{0.5em}
     }}
   \end{minipage}
 
@@ -230,11 +229,9 @@ using the combined TRAIN+VAL subset (3\,594 incidents).
   \centering
   \includegraphics[width=0.92\textwidth]{report_figs/q1_histograms.png}
   \caption{Histograms of \texttt{hour\_float}, \texttt{victim\_age},
-    \texttt{latitude}, and \texttt{longitude} (TRAIN+VAL).
-    The latitude and longitude distributions exhibit clear multi-modal structure,
+    \texttt{latitude}, and \texttt{longitude} (TRAIN+VAL). The latitude and longitude distributions exhibit clear multi-modal structure,
     suggesting spatially distinct crime clusters. Victim age is right-capped at
-    90 and shows two modes near 33 and 77, hinting at multiple killer groups.
-    Hour of day shows rich temporal structure unsuitable for a single Gaussian.}
+    90 and shows two modes near 33 and 77, hinting at multiple killer groups. Hour of day shows rich temporal structure unsuitable for a single Gaussian.}
   \label{fig:q1_hist}
 \end{figure}
 
@@ -254,8 +251,7 @@ p(h) = \sum_{j=1}^{3} \alpha_j\, \mathcal{N}(h \mid m_j, s_j^2), \quad
 \alpha_j \geq 0,\quad \sum_{j=1}^{3} \alpha_j = 1.
 \]
 Parameters are estimated via the Expectation-Maximisation (EM) algorithm
-(\texttt{sklearn.mixture.GaussianMixture}).
-The converged estimates are:
+(\texttt{sklearn.mixture.GaussianMixture}). The converged estimates are:
 
 \begin{center}
 \begin{tabular}{cccc}
@@ -287,8 +283,7 @@ The converged estimates are:
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.72\textwidth]{report_figs/q1_2d_exploration.png}
-  \caption{Scatter plot of \texttt{hour\_float} vs.\ \texttt{latitude} (no labels).
-    Two horizontally banded clusters are visible, corresponding to two distinct
+  \caption{Scatter plot of \texttt{hour\_float} vs.\ \texttt{latitude} (no labels). Two horizontally banded clusters are visible, corresponding to two distinct
     latitude zones. Within each zone, the crime density is roughly uniform across
     hours. This pattern already hints at spatially-separated killer territories
     that will be confirmed in Q2 and Q3.}
@@ -325,7 +320,7 @@ $\partial\ell/\partial\vSig_k = \bm{0}$ yields the closed-form estimators:
 \hatmu_k &= \frac{1}{\Nk}\sum_{i\in\Ik} \vx_i^{(c)}, \label{eq:mle_mu}\\
 \hatSig_k &= \frac{1}{\Nk}\sum_{i\in\Ik}
   \bigl(\vx_i^{(c)} - \hatmu_k\bigr)\bigl(\vx_i^{(c)} - \hatmu_k\bigr)^\top.
-  \label{eq:mle_sigma}
+\label{eq:mle_sigma}
 \end{align}
 
 \textbf{Proof sketch for $\hatmu_k$.}  Differentiating $\ell$ with respect to $\vmu_k$:
@@ -380,12 +375,10 @@ correctness of the implementation.
   \centering
   \includegraphics[width=\textwidth]{report_figs/q2_covariance_heatmaps.png}
   \caption{Correlation matrices $\hat{R}_k(p,q) = \hat{\Sigma}_k(p,q)\big/
-    \sqrt{\hat{\Sigma}_k(p,p)\hat{\Sigma}_k(q,q)}$ for all eight killers.
-    Each killer exhibits a unique correlation signature.
+    \sqrt{\hat{\Sigma}_k(p,p)\hat{\Sigma}_k(q,q)}$ for all eight killers. Each killer exhibits a unique correlation signature.
     K3 (the dominant killer) shows strong positive correlations between
     spatial features (\texttt{lat}, \texttt{lon}) and \texttt{humidity},
-    and negative correlation between \texttt{hour\_float} and \texttt{temp\_c}.
-    K1 and K8 (fewest incidents) produce noisier estimates.
+    and negative correlation between \texttt{hour\_float} and \texttt{temp\_c}. K1 and K8 (fewest incidents) produce noisier estimates.
     These distinct covariance structures justify the per-killer Gaussian model.}
   \label{fig:q2_heatmaps}
 \end{figure}
@@ -405,8 +398,7 @@ $\chi^2_{0.95,2} \approx 5.99$:
   \centering
   \includegraphics[width=\textwidth]{report_figs/q2_ellipses.png}
   \caption{95\% confidence ellipses per killer in the
-    latitude--longitude plane (left) and latitude--hour\_float plane (right).
-    In the spatial projection, the ellipses for most killers are well separated,
+    latitude--longitude plane (left) and latitude--hour\_float plane (right). In the spatial projection, the ellipses for most killers are well separated,
     confirming that killers operate in distinct geographic zones. In the
     latitude--time projection, the ellipses overlap more heavily, indicating
     that temporal patterns alone are less discriminative.}
@@ -469,13 +461,10 @@ VAL   & 75.2\% & Generalisation performance\\
     \includegraphics[width=\textwidth]{report_figs/q3_decision_regions.png}
     \caption{Decision regions in PCA-2D space}
   \end{subfigure}
-  \caption{Q3 Gaussian Bayes classifier.
-    \emph{Left:} The confusion matrix shows that K3 (the majority class) dominates
-    predictions; smaller killers K1 and K8 are frequently mis-attributed to K3.
-    \emph{Right:} Decision regions in the first two principal components of the
+  \caption{Q3 Gaussian Bayes classifier. \emph{Left:} The confusion matrix shows that K3 (the majority class) dominates
+    predictions; smaller killers K1 and K8 are frequently mis-attributed to K3. \emph{Right:} Decision regions in the first two principal components of the
     continuous features show roughly contiguous but blob-like boundaries ---
-    consistent with the ellipsoidal nature of Gaussian densities.
-    The limited accuracy (75.2\%) is partly explained by the class imbalance and by the
+    consistent with the ellipsoidal nature of Gaussian densities. The limited accuracy (75.2\%) is partly explained by the class imbalance and by the
     fact that only the 8 continuous features are used; the categorical features
     (weapon, scene, weather) carry additional discriminative information.}
   \label{fig:q3}
@@ -535,12 +524,10 @@ VAL   & \textbf{94.1\%} & $+18.9$pp\\
     \includegraphics[width=\textwidth]{report_figs/q4_bayes_vs_linear.png}
     \caption{Decision regions: Bayes vs.\ Linear (PCA-2D)}
   \end{subfigure}
-  \caption{Q4 Linear classifier results.
-    \emph{Left:} Dramatic improvement over Q3 — K1 (46 training samples) and
+  \caption{Q4 Linear classifier results. \emph{Left:} Dramatic improvement over Q3 — K1 (46 training samples) and
     K8 (52 samples) are now correctly identified in the majority of cases,
     demonstrating that the categorical features (especially \texttt{weapon\_code}
-    and \texttt{scene\_type}) are highly discriminative.
-    \emph{Right:} In the 2D PCA projection the linear model produces sharp,
+    and \texttt{scene\_type}) are highly discriminative. \emph{Right:} In the 2D PCA projection the linear model produces sharp,
     polygonal decision boundaries (right panel) versus the curved Gaussian
     boundaries of the Bayes classifier (left panel). The linear model struggles
     only at region boundaries involving K3 vs.\ K6 and K3 vs.\ K7, where
@@ -563,8 +550,7 @@ We train a one-vs-rest multiclass SVM with an RBF kernel:
 \[
 K(\vx_i, \vx_j) = \exp\!\left(-\gamma \|\vx_i - \vx_j\|^2\right),
 \]
-where $\gamma$ is set via \texttt{scale} heuristic ($\gamma = 1/(d \cdot \text{Var}(X))$).
-The soft-margin penalty $C = 10$ was chosen by monitoring VAL accuracy over the grid
+where $\gamma$ is set via \texttt{scale} heuristic ($\gamma = 1/(d \cdot \text{Var}(X))$). The soft-margin penalty $C = 10$ was chosen by monitoring VAL accuracy over the grid
 $C \in \{0.1, 1, 10, 100\}$. The optimisation solves:
 \[
 \min_{\bm{w},b,\bm{\xi}}\ \tfrac{1}{2}\|\bm{w}\|^2 + C\sum_i\xi_i \quad
@@ -596,14 +582,10 @@ VAL   & \textbf{93.4\%} & $-0.7$pp\\
     \includegraphics[width=\textwidth]{report_figs/q5_svm_decision.png}
     \caption{SVM decision regions + support vectors (PCA-2D)}
   \end{subfigure}
-  \caption{Q5 SVM (RBF kernel).
-    \emph{Left:} The confusion matrix is similar to Q4; both models fail on the
-    same hard cases at the K3/K6/K7 boundary.
-    \emph{Right:} In the PCA-2D projection the non-linear SVM boundaries (coloured
-    regions) are more curved and locally adaptive than the linear boundaries.
-    Support vectors (hollow circles) concentrate at the class boundaries and
-    at the edges of compact clusters, validating the maximum-margin geometry.
-    The high train accuracy (98.8\%) vs.\ VAL accuracy (93.4\%) indicates mild
+  \caption{Q5 SVM (RBF kernel). \emph{Left:} The confusion matrix is similar to Q4; both models fail on the
+    same hard cases at the K3/K6/K7 boundary. \emph{Right:} In the PCA-2D projection the non-linear SVM boundaries (coloured
+    regions) are more curved and locally adaptive than the linear boundaries. Support vectors (hollow circles) concentrate at the class boundaries and
+    at the edges of compact clusters, validating the maximum-margin geometry. The high train accuracy (98.8\%) vs.\ VAL accuracy (93.4\%) indicates mild
     overfitting in the low-dimensional projection used for this plot; the full
     25-dimensional model generalises more stably.}
   \label{fig:q5}
@@ -669,11 +651,9 @@ randomly shuffled. A large $\Delta A_j > 0$ indicates a crucial feature.
   \caption{Permutation feature importance — top 10 features. Red bars are continuous
     features; blue bars are one-hot categorical indicators. The five most important
     features are all continuous: \texttt{victim\_age}, \texttt{latitude},
-    \texttt{dist\_precinct\_km}, \texttt{humidity}, and \texttt{longitude}.
-    This reveals that each killer's spatial territory (\texttt{lat}/\texttt{lon}),
+    \texttt{dist\_precinct\_km}, \texttt{humidity}, and \texttt{longitude}. This reveals that each killer's spatial territory (\texttt{lat}/\texttt{lon}),
     victim demographics (\texttt{victim\_age}), and environmental context
-    (\texttt{humidity}, \texttt{dist\_precinct\_km}) are the dominant forensic signals.
-    Categorical features contribute less individually, but their collective effect
+    (\texttt{humidity}, \texttt{dist\_precinct\_km}) are the dominant forensic signals. Categorical features contribute less individually, but their collective effect
     explains the large performance gap between Bayes (uses only continuous) and the
     discriminative models (use both).}
   \label{fig:q6_importance}
@@ -726,11 +706,8 @@ where $V_m = [\bm{v}_1, \ldots, \bm{v}_m]$ are the top-$m$ eigenvectors.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.90\textwidth]{report_figs/q7_pca_scree.png}
-  \caption{Scree plot (left) and cumulative explained variance (right).
-    The eigenvalue curve shows a gradual elbow around component 10, after which
-    each additional component contributes less than 3\% of variance.
-    The cumulative variance curve crosses 90\% at $m = 14$ components.
-    We therefore select $m = 14$ as the latent dimension for Q8.}
+  \caption{Scree plot (left) and cumulative explained variance (right). The eigenvalue curve shows a gradual elbow around component 10, after which
+    each additional component contributes less than 3\% of variance. The cumulative variance curve crosses 90\% at $m = 14$ components. We therefore select $m = 14$ as the latent dimension for Q8.}
   \label{fig:q7_scree}
 \end{figure}
 
@@ -750,13 +727,10 @@ Variance explained by PC1--10  & 75.6\% & —\\
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.72\textwidth]{report_figs/q7_pca_scatter.png}
-  \caption{VAL incidents projected onto PC1 and PC2, coloured by SVM-predicted killer.
-    Roughly $S = 8$ visually distinct clusters are observable in this 2D projection,
-    despite only two of the 14 selected components being shown.
-    K3 (the majority class) occupies the central region, while K1, K4, K8
+  \caption{VAL incidents projected onto PC1 and PC2, coloured by SVM-predicted killer. Roughly $S = 8$ visually distinct clusters are observable in this 2D projection,
+    despite only two of the 14 selected components being shown. K3 (the majority class) occupies the central region, while K1, K4, K8
     (minority classes) form tight peripheral clusters — consistent with their
-    geographically and behaviourally distinctive \emph{modus operandi}.
-    The separation observed here validates the assumption underlying the k-means
+    geographically and behaviourally distinctive \emph{modus operandi}. The separation observed here validates the assumption underlying the k-means
     approach in Q8.}
   \label{fig:q7_scatter}
 \end{figure}
@@ -811,8 +785,7 @@ $\hat{c}_i^{(\text{km})} = \argmin_q \|\bm{z}_i - \bm{\mu}_q^{(\text{km})}\|^2$.
 
 \textbf{Remark.} Multiple clusters map to K3 because K3 is the dominant class
 (51\% of TRAIN). K-means has partitioned K3's data into several sub-clusters,
-while the minority killers (K1, K4, K5, K8) do not receive dedicated clusters.
-This is a fundamental limitation of k-means: without label information, it cannot
+while the minority killers (K1, K4, K5, K8) do not receive dedicated clusters. This is a fundamental limitation of k-means: without label information, it cannot
 distinguish the dominant class's sub-clusters from separate classes.
 
 \subsection{Results}
@@ -840,13 +813,10 @@ killer clusters in the PCA-14 space.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{report_figs/q8_kmeans.png}
-  \caption{K-Means predictions on VAL (left) and TEST (right) projected onto PC1--PC2.
-    \emph{Left:} The VAL predictions form visually coherent groups. The dominant
+  \caption{K-Means predictions on VAL (left) and TEST (right) projected onto PC1--PC2. \emph{Left:} The VAL predictions form visually coherent groups. The dominant
     K3 predictions fill the central region while the other killers form smaller,
-    more peripheral clusters.
-    \emph{Right:} The TEST predictions mirror the VAL structure, confirming
-    that the PCA + k-means pipeline generalises well to unseen data.
-    The alignment between the predicted groups and the visual clusters suggests
+    more peripheral clusters. \emph{Right:} The TEST predictions mirror the VAL structure, confirming
+    that the PCA + k-means pipeline generalises well to unseen data. The alignment between the predicted groups and the visual clusters suggests
     that the 14-dimensional PCA space faithfully encodes the inter-killer variation.}
   \label{fig:q8_kmeans}
 \end{figure}
@@ -873,21 +843,17 @@ killer clusters in the PCA-14 space.
     features (\texttt{latitude}, \texttt{longitude}) together provide extremely
     strong evidence for killer identity. The 18.9 pp jump from Bayes (continuous only)
     to Logistic Regression (all features) confirms this.
-
   \item \textbf{Linearity.} The best VAL accuracy is achieved by the \emph{linear}
     model, not the more complex SVM or MLP. This suggests that after one-hot encoding,
     the killer classes are approximately linearly separable in the full feature space.
-
   \item \textbf{Class imbalance.} K3 (51\% of TRAIN) creates predictable difficulties.
     All models tend to absorb ambiguous incidents into K3. Future work could explore
     class-weighted losses or oversampling (e.g.\ SMOTE) for the minority killers.
-
   \item \textbf{Unsupervised clustering.} Despite having no access to labels at inference
     time, k-means in PCA-14 space achieves 81.6\% VAL accuracy --- outperforming
     even the fully-supervised Bayes classifier. This strongly supports the hypothesis
     that killer identities correspond to geometrically coherent clusters in the
     standardised feature space.
-
   \item \textbf{MLE verification.} The from-scratch MLE estimates for $(\vmu_k, \hatSig_k)$
     matched the library implementation to numerical precision (difference $<10^{-5}$
     for all killers), validating both the mathematical derivation and the implementation.
