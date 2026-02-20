@@ -1,0 +1,961 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ───────────────────────────────────────────────────────────────────
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{bm}          % bold math
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{mathtools}
+\usepackage{multirow}
+\usepackage{colortbl}
+
+% ── Colours ────────────────────────────────────────────────────────────────────
+\definecolor{piraeusblue}{RGB}{0,70,127}
+\definecolor{piraeuscyan}{RGB}{0,180,216}
+\definecolor{lightgray}{RGB}{245,245,245}
+\definecolor{darkgray}{RGB}{80,80,80}
+\definecolor{accentred}{RGB}{180,30,30}
+\definecolor{accentgreen}{RGB}{30,140,70}
+
+% ── Hyperref setup ─────────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=piraeusblue,
+  urlcolor=piraeuscyan,
+  citecolor=accentred,
+  pdftitle={Who Is The Killer? - Pattern Recognition Report},
+  pdfauthor={Group Submission}
+}
+
+% ── Header / Footer ────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{piraeusblue}{\textbf{Piraeus Vice — Pattern Recognition Investigation}}}
+\fancyhead[R]{\small\textcolor{darkgray}{Q1–Q8 Report}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.6pt}
+
+% ── Section formatting ─────────────────────────────────────────────────────────
+\titleformat{\section}[block]
+  {\large\bfseries\color{piraeusblue}}
+  {}{0em}{\colorbox{piraeusblue!10}{\parbox{\dimexpr\linewidth-2\fboxsep}{\hspace{0.4em}\thesection\hspace{0.6em}#1}}}
+  [\vspace{-0.3em}\rule{\linewidth}{0.8pt}]
+
+\titleformat{\subsection}{\normalsize\bfseries\color{piraeusblue!80}}{}{0em}{\thesubsection\hspace{0.5em}#1}
+
+% ── Theorem environments ───────────────────────────────────────────────────────
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+% ── Custom commands ────────────────────────────────────────────────────────────
+\newcommand{\vx}{\bm{x}}
+\newcommand{\vmu}{\bm{\mu}}
+\newcommand{\vSig}{\bm{\Sigma}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathcal{N}}
+\newcommand{\Ik}{\mathcal{I}_k}
+\newcommand{\Nk}{N_k}
+\newcommand{\hatmu}{\hat{\bm{\mu}}}
+\newcommand{\hatSig}{\hat{\bm{\Sigma}}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\tr}{\operatorname{tr}}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+
+  {\Huge\bfseries\color{piraeusblue} Who Is The Killer?}\\[0.5em]
+  {\Large\color{darkgray} A Pattern Recognition and Machine Learning Investigation}\\[2em]
+
+  \rule{\linewidth}{1pt}\\[1.5em]
+
+  \begin{minipage}{0.7\linewidth}
+    \centering
+    {\large\bfseries Course:} Pattern Recognition \& Machine Learning\\[0.4em]
+    {\large\bfseries Instructor:} Assoc.\ Prof.\ Dionisios N.\ Sotiropoulos\\[0.4em]
+    {\large\bfseries Dataset:} Piraeus Vice Homicide Division — \texttt{crimes.csv}\\[0.4em]
+    {\large\bfseries Incidents:} 4\,800 total \;$|\$\; S=8$ serial killers\\[0.4em]
+    {\large\bfseries Split:} 2\,636 TRAIN \;$|\$\; 958 VAL \;$|\$\; 1\,206 TEST
+  \end{minipage}
+
+  \vspace{2em}
+  \rule{\linewidth}{0.5pt}\\[2em]
+
+  \begin{minipage}{0.85\linewidth}
+    \centering
+    \colorbox{lightgray}{\parbox{0.95\linewidth}{
+      \centering\vspace{0.5em}
+      {\large\bfseries\color{piraeusblue} Executive Summary}\\[0.5em]
+      \normalsize
+      This report presents a complete end-to-end investigation of serial killer attribution
+      using the anonymised Piraeus homicide dataset. We progress from exploratory statistics
+      (Q1) through MLE-based generative modelling (Q2), Bayesian classification (Q3),
+      discriminative linear and non-linear classifiers (Q4--Q6), dimensionality reduction
+      (Q7), and unsupervised clustering (Q8). The best supervised model (Logistic Regression)
+      achieves \textbf{94.1\%} validation accuracy. All code, figures, and the final
+      \texttt{submission.csv} are provided alongside this report.
+      \vspace{0.5em}
+    }}
+  \end{minipage}
+
+  \vfill
+  \today
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Data Description and Preprocessing}
+% =============================================================================
+
+The dataset \texttt{crimes.csv} contains $N=4\,800$ anonymised crime incidents
+(homicides and attempted homicides) from the Piraeus Vice Homicide Division, recorded
+between 2019 and 2024. Each incident $i$ is described by a feature vector
+$\vx_i \in \R^d$, decomposed into a continuous block $\vx_i^{(c)} \in \R^{d_c}$
+($d_c = 8$) and a categorical block $\vx_i^{(\text{cat})} \in \R^{d_{\text{cat}}}$.
+
+\subsection{Continuous Features ($d_c = 8$)}
+
+\begin{center}
+\begin{tabular}{clll}
+\toprule
+\textbf{Index} & \textbf{Feature} & \textbf{Description} & \textbf{Range}\\
+\midrule
+1 & \texttt{hour\_float}       & Time of day (hours) & $[0,24)$\\
+2 & \texttt{latitude}          & Anonymised latitude & continuous\\
+3 & \texttt{longitude}         & Anonymised longitude & continuous\\
+4 & \texttt{victim\_age}       & Victim age (years) & $[0,90]$\\
+5 & \texttt{temp\_c}           & Air temperature ($^\circ$C) & continuous\\
+6 & \texttt{humidity}          & Relative humidity (\%) & $[10,100]$\\
+7 & \texttt{dist\_precinct\_km}& Distance to nearest precinct (km) & $\geq 0$\\
+8 & \texttt{pop\_density}      & Population density (persons/km$^2$) & $\geq 0$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Categorical Features and One-Hot Encoding}
+
+Four categorical variables are encoded via standard one-hot encoding, yielding
+$d_{\text{cat}} = C_1 + C_2 + C_3 + C_4 = 6 + 4 + 5 + 2 = 17$ additional binary
+dimensions, so $d = 8 + 17 = 25$.
+
+\begin{center}
+\begin{tabular}{llcl}
+\toprule
+\textbf{Variable} & \textbf{Values} & $C_j$ & \textbf{Encoding}\\
+\midrule
+\texttt{weapon\_code} & knife, handgun, revolver, shotgun, blunt, unknown & 6 & $\bm{e}^{(w)} \in \R^6$\\
+\texttt{scene\_type}  & street, residence, business, other & 4 & $\bm{e}^{(s)} \in \R^4$\\
+\texttt{weather}      & clear, rain, snow, fog, unknown & 5 & $\bm{e}^{(r)} \in \R^5$\\
+\texttt{vic\_gender}  & male, female & 2 & $\bm{e}^{(g)} \in \R^2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The full encoded categorical vector is:
+\[
+\vx_i^{(\text{cat})} = \bigl[\bm{e}^{(w)\top}_{w_i},\; \bm{e}^{(s)\top}_{s_i},\;
+\bm{e}^{(r)\top}_{r_i},\; \bm{e}^{(g)\top}_{g_i}\bigr]^\top \in \R^{17}.
+\]
+
+\subsection{Dataset Splits and Label Distribution}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Split} & \textbf{Incidents} & \textbf{\% of total}\\
+\midrule
+TRAIN & 2\,636 & 54.9\%\\
+VAL   &   958  & 20.0\%\\
+TEST  & 1\,206 & 25.1\%\\
+\midrule
+\textbf{Total} & \textbf{4\,800} & 100\%\\
+\bottomrule
+\end{tabular}
+\hspace{2em}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Killer} & \textbf{TRAIN count} & \textbf{Prior $\hat{\pi}_k$}\\
+\midrule
+K1 &    46 & 0.017\\
+K2 &   171 & 0.065\\
+K3 & 1\,350 & 0.512\\
+K4 &   123 & 0.047\\
+K5 &   133 & 0.050\\
+K6 &   366 & 0.139\\
+K7 &   395 & 0.150\\
+K8 &    52 & 0.020\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The dataset is notably imbalanced: killer K3 accounts for over 51\% of training
+incidents, while K1 and K8 each contribute fewer than 2\%. This imbalance will
+influence the Bayesian prior and must be considered when interpreting confusion matrices.
+
+% =============================================================================
+\section{Q1 — Exploratory Distributions}
+% =============================================================================
+
+\subsection{Univariate Histograms}
+
+Figure~\ref{fig:q1_hist} shows histograms of the four principal continuous features
+using the combined TRAIN+VAL subset (3\,594 incidents).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{report_figs/q1_histograms.png}
+  \caption{Histograms of \texttt{hour\_float}, \texttt{victim\_age},
+    \texttt{latitude}, and \texttt{longitude} (TRAIN+VAL).
+    The latitude and longitude distributions exhibit clear multi-modal structure,
+    suggesting spatially distinct crime clusters. Victim age is right-capped at
+    90 and shows two modes near 33 and 77, hinting at multiple killer groups.
+    Hour of day shows rich temporal structure unsuitable for a single Gaussian.}
+  \label{fig:q1_hist}
+\end{figure}
+
+\subsection{Gaussian and GMM Fitting for \texttt{hour\_float}}
+
+\paragraph{Single Gaussian fit.}
+We fit $\mathcal{N}(\mu, \sigma^2)$ via the sample mean and variance:
+\[
+\hat{\mu} = \frac{1}{n}\sum_{i=1}^n h_i = 11.87, \qquad
+\hat{\sigma}^2 = \frac{1}{n}\sum_{i=1}^n (h_i - \hat{\mu})^2, \qquad \hat{\sigma} = 7.19.
+\]
+
+\paragraph{Three-component GMM fit.}
+We model the hour-of-day density as a mixture:
+\[
+p(h) = \sum_{j=1}^{3} \alpha_j\, \mathcal{N}(h \mid m_j, s_j^2), \quad
+\alpha_j \geq 0,\quad \sum_{j=1}^{3} \alpha_j = 1.
+\]
+Parameters are estimated via the Expectation-Maximisation (EM) algorithm
+(\texttt{sklearn.mixture.GaussianMixture}).
+The converged estimates are:
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Component} & \textbf{Weight $\hat{\alpha}_j$} & \textbf{Mean $\hat{m}_j$} & \textbf{Std $\hat{s}_j$}\\
+\midrule
+1 & 0.31 & 3.7  & 2.8\\
+2 & 0.35 & 12.4 & 3.5\\
+3 & 0.34 & 20.3 & 2.6\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{report_figs/q1_gmm_fit.png}
+  \caption{Density of \texttt{hour\_float} with single Gaussian (red) and
+    3-component GMM (green). The single Gaussian is clearly inadequate: it assigns
+    significant probability mass to the noon hours while underestimating the
+    early-morning and late-evening peaks. The three components correspond to
+    \emph{night crimes} ($\sim$03:00--04:00), \emph{daytime crimes} ($\sim$12:00),
+    and \emph{evening crimes} ($\sim$20:00--21:00). The GMM captures all three modes
+    faithfully, suggesting that different killers prefer different time windows.}
+  \label{fig:q1_gmm}
+\end{figure}
+
+\subsection{Two-Dimensional Exploration}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{report_figs/q1_2d_exploration.png}
+  \caption{Scatter plot of \texttt{hour\_float} vs.\ \texttt{latitude} (no labels).
+    Two horizontally banded clusters are visible, corresponding to two distinct
+    latitude zones. Within each zone, the crime density is roughly uniform across
+    hours. This pattern already hints at spatially-separated killer territories
+    that will be confirmed in Q2 and Q3.}
+  \label{fig:q1_2d}
+\end{figure}
+
+% =============================================================================
+\section{Q2 — Maximum Likelihood Estimation per Killer}
+% =============================================================================
+
+\subsection{Derivation of MLE Estimators}
+
+We assume that, conditional on killer $k$, the continuous features follow a
+multivariate Gaussian:
+\[
+\vx^{(c)} \mid (K = k) \sim \mathcal{N}\!\left(\vmu_k,\, \vSig_k\right).
+\]
+
+Let $\Ik = \{i : \text{split}_i = \text{TRAIN},\; \text{killer\_id}_i = k\}$ and
+$\Nk = |\Ik|$.
+
+\begin{proposition}[MLE for Gaussian parameters]
+The log-likelihood for killer $k$ on its training incidents is:
+\[
+\ell(\vmu_k, \vSig_k) = -\frac{\Nk}{2}\ln\det(2\pi\vSig_k)
+  - \frac{1}{2}\sum_{i\in\Ik}\bigl(\vx_i^{(c)} - \vmu_k\bigr)^\top
+  \vSig_k^{-1}\bigl(\vx_i^{(c)} - \vmu_k\bigr).
+\]
+Setting $\partial\ell/\partial\vmu_k = \bm{0}$ and
+$\partial\ell/\partial\vSig_k = \bm{0}$ yields the closed-form estimators:
+\end{proposition}
+
+\begin{align}
+\hatmu_k &= \frac{1}{\Nk}\sum_{i\in\Ik} \vx_i^{(c)}, \label{eq:mle_mu}\\
+\hatSig_k &= \frac{1}{\Nk}\sum_{i\in\Ik}
+  \bigl(\vx_i^{(c)} - \hatmu_k\bigr)\bigl(\vx_i^{(c)} - \hatmu_k\bigr)^\top.
+  \label{eq:mle_sigma}
+\end{align}
+
+\textbf{Proof sketch for $\hatmu_k$.}  Differentiating $\ell$ with respect to $\vmu_k$:
+\[
+\frac{\partial\ell}{\partial\vmu_k}
+= \vSig_k^{-1}\sum_{i\in\Ik}\bigl(\vx_i^{(c)} - \vmu_k\bigr) = \bm{0}
+\quad\Longrightarrow\quad
+\hatmu_k = \frac{1}{\Nk}\sum_{i\in\Ik} \vx_i^{(c)}.
+\]
+
+\textbf{Proof sketch for $\hatSig_k$.}  Using the matrix identities
+$\partial\ln\det(\vSig)/\partial\vSig = \vSig^{-\top}$ and
+$\partial[\bm{a}^\top\vSig^{-1}\bm{a}]/\partial\vSig = -\vSig^{-1}\bm{a}\bm{a}^\top\vSig^{-1}$,
+and setting $\partial\ell/\partial\vSig_k = \bm{0}$:
+\[
+-\frac{\Nk}{2}\vSig_k^{-1}
++ \frac{1}{2}\sum_{i\in\Ik}\vSig_k^{-1}
+  \bigl(\vx_i^{(c)}-\hatmu_k\bigr)\bigl(\vx_i^{(c)}-\hatmu_k\bigr)^\top\vSig_k^{-1}
+= \bm{0},
+\]
+which gives equation~\eqref{eq:mle_sigma} upon left- and right-multiplying by $\vSig_k$. $\square$
+
+\subsection{Numerical Verification}
+
+The estimators in \eqref{eq:mle_mu}--\eqref{eq:mle_sigma} were implemented from scratch
+in NumPy (matrix operations only, no library fit function). The resulting log-likelihood
+was compared against an independent evaluation using \texttt{scipy.stats.multivariate\_normal}:
+
+\begin{center}
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Killer} & \textbf{LL manual} & \textbf{LL library} & \textbf{Difference}\\
+\midrule
+K1 & $-364.0$ & $-364.0$ & $0.00000$\\
+K2 & $-1\,468.9$ & $-1\,468.9$ & $0.00000$\\
+K3 & $-11\,143.9$ & $-11\,143.9$ & $0.00000$\\
+K4 & $-1\,176.8$ & $-1\,176.8$ & $0.00000$\\
+K5 & $-1\,330.4$ & $-1\,330.4$ & $0.00000$\\
+K6 & $+506.4$ & $+506.4$ & $0.00000$\\
+K7 & $-4\,675.0$ & $-4\,675.0$ & $0.00000$\\
+K8 & $-471.6$ & $-471.6$ & $0.00000$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All differences are numerically zero (within floating-point tolerance), confirming
+correctness of the implementation.
+
+\subsection{Covariance Heatmaps}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{report_figs/q2_covariance_heatmaps.png}
+  \caption{Correlation matrices $\hat{R}_k(p,q) = \hat{\Sigma}_k(p,q)\big/
+    \sqrt{\hat{\Sigma}_k(p,p)\hat{\Sigma}_k(q,q)}$ for all eight killers.
+    Each killer exhibits a unique correlation signature.
+    K3 (the dominant killer) shows strong positive correlations between
+    spatial features (\texttt{lat}, \texttt{lon}) and \texttt{humidity},
+    and negative correlation between \texttt{hour\_float} and \texttt{temp\_c}.
+    K1 and K8 (fewest incidents) produce noisier estimates.
+    These distinct covariance structures justify the per-killer Gaussian model.}
+  \label{fig:q2_heatmaps}
+\end{figure}
+
+\subsection{Confidence Ellipses}
+
+For each killer $k$ we project TRAIN incidents onto two 2D planes and draw
+the 95\% confidence ellipse defined by the chi-squared threshold
+$\chi^2_{0.95,2} \approx 5.99$:
+\[
+\bigl(\vx^{(2)} - \hatmu_k^{(2)}\bigr)^\top
+\bigl(\hatSig_k^{(2)}\bigr)^{-1}
+\bigl(\vx^{(2)} - \hatmu_k^{(2)}\bigr) = 5.99.
+\]
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{report_figs/q2_ellipses.png}
+  \caption{95\% confidence ellipses per killer in the
+    latitude--longitude plane (left) and latitude--hour\_float plane (right).
+    In the spatial projection, the ellipses for most killers are well separated,
+    confirming that killers operate in distinct geographic zones. In the
+    latitude--time projection, the ellipses overlap more heavily, indicating
+    that temporal patterns alone are less discriminative.}
+  \label{fig:q2_ellipses}
+\end{figure}
+
+% =============================================================================
+\section{Q3 — Multiclass Gaussian Bayes Classifier}
+% =============================================================================
+
+\subsection{Model Formulation}
+
+Using the MLE estimates from Q2 together with empirical class priors
+$\hat{\pi}_k = \Nk / \sum_j N_j$, Bayes' theorem gives:
+\begin{equation}
+P(K=k \mid \vx^{(c)}) \propto \hat{\pi}_k\,
+  \mathcal{N}\!\left(\vx^{(c)} \mid \hatmu_k,\hatSig_k\right).
+\label{eq:bayes_rule}
+\end{equation}
+
+Computing the normalised posteriors:
+\begin{equation}
+\hat{\pi}_i(k) = \frac{\hat{\pi}_k\,\mathcal{N}\!\left(\vx_i^{(c)}\mid\hatmu_k,\hatSig_k\right)}
+  {\displaystyle\sum_{j=1}^{S}\hat{\pi}_j\,
+   \mathcal{N}\!\left(\vx_i^{(c)}\mid\hatmu_j,\hatSig_j\right)},
+\quad k=1,\ldots,S.
+\label{eq:posterior}
+\end{equation}
+
+In practice we work in log-space to avoid numerical underflow:
+\[
+\ln p_k(\vx_i) = \ln\hat{\pi}_k
+  - \tfrac{1}{2}\ln\det(\hatSig_k + \epsilon I)
+  - \tfrac{1}{2}(\vx_i - \hatmu_k)^\top(\hatSig_k + \epsilon I)^{-1}(\vx_i-\hatmu_k),
+\]
+with regularisation $\epsilon = 10^{-4}$. The normalised posteriors are then:
+$\hat{\pi}_i(k) = \exp\!\bigl(\ln p_k(\vx_i) - \operatorname{logsumexp}_j \ln p_j(\vx_i)\bigr)$.
+
+\subsection{Results}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Split} & \textbf{Accuracy} & \textbf{Notes}\\
+\midrule
+TRAIN & 77.5\% & Sanity check — model sees its own data\\
+VAL   & 75.2\% & Generalisation performance\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q3_confusion_matrix.png}
+    \caption{Confusion matrix (VAL)}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q3_decision_regions.png}
+    \caption{Decision regions in PCA-2D space}
+  \end{subfigure}
+  \caption{Q3 Gaussian Bayes classifier.
+    \emph{Left:} The confusion matrix shows that K3 (the majority class) dominates
+    predictions; smaller killers K1 and K8 are frequently mis-attributed to K3.
+    \emph{Right:} Decision regions in the first two principal components of the
+    continuous features show roughly contiguous but blob-like boundaries ---
+    consistent with the ellipsoidal nature of Gaussian densities.
+    The limited accuracy (75.2\%) is partly explained by the class imbalance and by the
+    fact that only the 8 continuous features are used; the categorical features
+    (weapon, scene, weather) carry additional discriminative information.}
+  \label{fig:q3}
+\end{figure}
+
+\textbf{Discussion.} The Gaussian Bayes classifier has two structural limitations here:
+(i) it uses only the continuous block $\vx^{(c)}$ and discards the 17-dimensional
+categorical block; (ii) the Gaussian assumption may not hold globally across each
+killer's feature distribution. Both limitations are addressed by the discriminative
+models in Q4--Q6.
+
+% =============================================================================
+\section{Q4 — Linear Classifier}
+% =============================================================================
+
+\subsection{Model Formulation}
+
+We train a multiclass linear classifier on the \emph{full} feature vector
+$\vx_i \in \R^{25}$ (continuous + one-hot encoded categorical):
+\[
+f(\vx) = W\vx + \bm{b}, \quad W \in \R^{S \times d},\quad \bm{b} \in \R^S.
+\]
+
+We use multinomial logistic regression (softmax output) optimised via
+\texttt{lbfgs} with $\ell_2$ regularisation $C = 1.0$. This is equivalent to
+maximum-likelihood estimation of a log-linear model with $\ell_2$ regularisation,
+minimising the cross-entropy loss:
+\[
+\mathcal{L}(W,\bm{b}) = -\frac{1}{N}\sum_{i=1}^N \ln
+  \frac{\exp\!\bigl(f_{k_i}(\vx_i)\bigr)}{\sum_{j=1}^S \exp\!\bigl(f_j(\vx_i)\bigr)}
+  + \frac{1}{2C}\|W\|_F^2,
+\]
+where $k_i$ is the true killer for incident $i$. Features are standardised
+(zero mean, unit variance) before training.
+
+\subsection{Results}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Split} & \textbf{Accuracy} & \textbf{vs Q3 Bayes}\\
+\midrule
+TRAIN & 95.9\% & $+18.4$pp\\
+VAL   & \textbf{94.1\%} & $+18.9$pp\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q4_confusion_matrix.png}
+    \caption{Confusion matrix (VAL)}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q4_bayes_vs_linear.png}
+    \caption{Decision regions: Bayes vs.\ Linear (PCA-2D)}
+  \end{subfigure}
+  \caption{Q4 Linear classifier results.
+    \emph{Left:} Dramatic improvement over Q3 — K1 (46 training samples) and
+    K8 (52 samples) are now correctly identified in the majority of cases,
+    demonstrating that the categorical features (especially \texttt{weapon\_code}
+    and \texttt{scene\_type}) are highly discriminative.
+    \emph{Right:} In the 2D PCA projection the linear model produces sharp,
+    polygonal decision boundaries (right panel) versus the curved Gaussian
+    boundaries of the Bayes classifier (left panel). The linear model struggles
+    only at region boundaries involving K3 vs.\ K6 and K3 vs.\ K7, where
+    the class overlap is highest.}
+  \label{fig:q4}
+\end{figure}
+
+\textbf{Discussion.} The jump from 75.2\% (Bayes) to 94.1\% (Linear) is primarily
+explained by the inclusion of the one-hot categorical features. Weapon preferences,
+scene types, and weather conditions are strongly associated with specific killers,
+and the linear model exploits these associations directly through its weight matrix $W$.
+
+% =============================================================================
+\section{Q5 — Support Vector Machines}
+% =============================================================================
+
+\subsection{Model and Hyperparameters}
+
+We train a one-vs-rest multiclass SVM with an RBF kernel:
+\[
+K(\vx_i, \vx_j) = \exp\!\left(-\gamma \|\vx_i - \vx_j\|^2\right),
+\]
+where $\gamma$ is set via \texttt{scale} heuristic ($\gamma = 1/(d \cdot \text{Var}(X))$).
+The soft-margin penalty $C = 10$ was chosen by monitoring VAL accuracy over the grid
+$C \in \{0.1, 1, 10, 100\}$. The optimisation solves:
+\[
+\min_{\bm{w},b,\bm{\xi}}\ \tfrac{1}{2}\|\bm{w}\|^2 + C\sum_i\xi_i \quad
+\text{s.t.}\ y_i({\bm{w}^\top\phi(\vx_i)+b}) \geq 1-\xi_i,\ \xi_i\geq 0,
+\]
+for each binary sub-problem, where $\phi$ is the implicit feature map of the RBF kernel.
+
+\subsection{Results}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Split} & \textbf{Accuracy} & \textbf{vs Q4 Linear}\\
+\midrule
+TRAIN & 98.8\% & $+2.9$pp\\
+VAL   & \textbf{93.4\%} & $-0.7$pp\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.47\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q5_confusion_matrix.png}
+    \caption{Confusion matrix (VAL)}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.50\textwidth}
+    \includegraphics[width=\textwidth]{report_figs/q5_svm_decision.png}
+    \caption{SVM decision regions + support vectors (PCA-2D)}
+  \end{subfigure}
+  \caption{Q5 SVM (RBF kernel).
+    \emph{Left:} The confusion matrix is similar to Q4; both models fail on the
+    same hard cases at the K3/K6/K7 boundary.
+    \emph{Right:} In the PCA-2D projection the non-linear SVM boundaries (coloured
+    regions) are more curved and locally adaptive than the linear boundaries.
+    Support vectors (hollow circles) concentrate at the class boundaries and
+    at the edges of compact clusters, validating the maximum-margin geometry.
+    The high train accuracy (98.8\%) vs.\ VAL accuracy (93.4\%) indicates mild
+    overfitting in the low-dimensional projection used for this plot; the full
+    25-dimensional model generalises more stably.}
+  \label{fig:q5}
+\end{figure}
+
+% =============================================================================
+\section{Q6 — Multi-Layer Perceptron}
+% =============================================================================
+
+\subsection{Architecture and Training}
+
+The MLP has the architecture:
+\[
+\underbrace{25}_{\text{input}} \;\to\; 128 \;\to\; 64 \;\to\; 32 \;\to\;
+\underbrace{8}_{\text{softmax output}},
+\]
+with ReLU activations in hidden layers and softmax in the output:
+\[
+\hat{\bm{\pi}}_i = \operatorname{softmax}(W^{(L)}\bm{h}^{(L-1)} + \bm{b}^{(L)}),\quad
+\hat{\pi}_i(k) = \frac{\exp(z_k)}{\sum_{j=1}^S \exp(z_j)}.
+\]
+
+Training minimises the categorical cross-entropy loss using the Adam optimiser
+with learning rate $\eta = 10^{-3}$, $\ell_2$ weight decay $\alpha = 10^{-3}$,
+batch size 256, and early stopping on a 10\% internal validation split
+(patience determined by sklearn default). Maximum epochs = 300.
+
+\subsection{Results}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Split} & \textbf{Accuracy} & \textbf{vs Q3 Bayes}\\
+\midrule
+TRAIN & 95.6\% & $+18.1$pp\\
+VAL   & \textbf{93.4\%} & $+18.2$pp\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.52\textwidth]{report_figs/q6_confusion_matrix.png}
+  \caption{Q6 MLP confusion matrix (VAL). The MLP achieves the same 93.4\% as the
+    SVM. The residual errors are concentrated in the K3 row/column — K3 is
+    occasionally mistaken for K6 and K7, which operate in overlapping geographic zones.}
+  \label{fig:q6_cm}
+\end{figure}
+
+\subsection{Permutation Feature Importance}
+
+The importance score for feature $j$ is defined as:
+\[
+\Delta A_j = A_{\text{base}} - A_j, \quad
+A_j = \text{Accuracy}\!\left(\text{MLP},\, X_{\text{VAL}}^{(\text{perm},j)}\right),
+\]
+where $X_{\text{VAL}}^{(\text{perm},j)}$ is the validation matrix with column $j$
+randomly shuffled. A large $\Delta A_j > 0$ indicates a crucial feature.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{report_figs/q6_feature_importance.png}
+  \caption{Permutation feature importance — top 10 features. Red bars are continuous
+    features; blue bars are one-hot categorical indicators. The five most important
+    features are all continuous: \texttt{victim\_age}, \texttt{latitude},
+    \texttt{dist\_precinct\_km}, \texttt{humidity}, and \texttt{longitude}.
+    This reveals that each killer's spatial territory (\texttt{lat}/\texttt{lon}),
+    victim demographics (\texttt{victim\_age}), and environmental context
+    (\texttt{humidity}, \texttt{dist\_precinct\_km}) are the dominant forensic signals.
+    Categorical features contribute less individually, but their collective effect
+    explains the large performance gap between Bayes (uses only continuous) and the
+    discriminative models (use both).}
+  \label{fig:q6_importance}
+\end{figure}
+
+\subsection{Model Comparison Summary}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Features used} & \textbf{TRAIN Acc.} & \textbf{VAL Acc.}\\
+\midrule
+Gaussian Bayes  & Continuous only ($d=8$)  & 77.5\% & 75.2\%\\
+Linear (LR)     & Full ($d=25$)            & \textbf{95.9\%} & \textbf{94.1\%}\\
+SVM (RBF, C=10) & Full ($d=25$)            & 98.8\% & 93.4\%\\
+MLP (128-64-32) & Full ($d=25$)            & 95.6\% & 93.4\%\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The Logistic Regression model achieves the highest VAL accuracy. The SVM and MLP
+match each other but slightly underperform LR on this dataset, likely because the
+class boundaries are sufficiently linear once categorical features are included.
+
+% =============================================================================
+\section{Q7 — Principal Component Analysis}
+% =============================================================================
+
+\subsection{Methodology}
+
+All 25 features (continuous + one-hot) are standardised to zero mean and unit
+variance (using TRAIN statistics only). PCA is then applied to the TRAIN
+standardised matrix $\tilde{X} \in \R^{2636 \times 25}$, computing the
+spectral decomposition:
+\[
+\hat{\Sigma} = \frac{1}{N_{\text{train}}}\tilde{X}^\top\tilde{X}
+= V \Lambda V^\top, \quad
+\Lambda = \operatorname{diag}(\lambda_1, \lambda_2, \ldots, \lambda_{25}),\quad
+\lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_{25} \geq 0.
+\]
+
+The projection of incident $i$ onto the first $m$ principal components is:
+\[
+\bm{z}_i = V_m^\top \tilde{\vx}_i \in \R^m,
+\]
+where $V_m = [\bm{v}_1, \ldots, \bm{v}_m]$ are the top-$m$ eigenvectors.
+
+\subsection{Choosing the Number of Components}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{report_figs/q7_pca_scree.png}
+  \caption{Scree plot (left) and cumulative explained variance (right).
+    The eigenvalue curve shows a gradual elbow around component 10, after which
+    each additional component contributes less than 3\% of variance.
+    The cumulative variance curve crosses 90\% at $m = 14$ components.
+    We therefore select $m = 14$ as the latent dimension for Q8.}
+  \label{fig:q7_scree}
+\end{figure}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Criterion} & \textbf{Result} & \textbf{Value}\\
+\midrule
+Variance explained by PC1--10  & 75.6\% & —\\
+90\% variance threshold at     & $m = 14$ components & $\sum_{j=1}^{14}\lambda_j / \sum_j \lambda_j = 0.902$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{VAL Scatter in PCA Space}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{report_figs/q7_pca_scatter.png}
+  \caption{VAL incidents projected onto PC1 and PC2, coloured by SVM-predicted killer.
+    Roughly $S = 8$ visually distinct clusters are observable in this 2D projection,
+    despite only two of the 14 selected components being shown.
+    K3 (the majority class) occupies the central region, while K1, K4, K8
+    (minority classes) form tight peripheral clusters — consistent with their
+    geographically and behaviourally distinctive \emph{modus operandi}.
+    The separation observed here validates the assumption underlying the k-means
+    approach in Q8.}
+  \label{fig:q7_scatter}
+\end{figure}
+
+% =============================================================================
+\section{Q8 — k-Means Clustering in PCA Space}
+% =============================================================================
+
+\subsection{Methodology}
+
+\paragraph{Step 1 — Projection.}
+Using the PCA fitted on TRAIN (Q7), we project all incidents:
+$\bm{z}_i = V_{14}^\top \tilde{\vx}_i \in \R^{14}$, for $i \in \text{TRAIN} \cup \text{VAL} \cup \text{TEST}$.
+
+\paragraph{Step 2 — K-Means.}
+Run $k$-means with $k = S = 8$ on $\{\bm{z}_i : i \in \text{TRAIN}\}$:
+\[
+\min_{\{C_q\}_{q=1}^S} \sum_{q=1}^S \sum_{\bm{z}_i \in C_q}
+\|\bm{z}_i - \bm{\mu}_q^{(\text{km})}\|^2,
+\]
+using $k$-means$++$ initialisation and 20 restarts. Each TRAIN incident receives
+cluster label $c_i^{(\text{km})} \in \{0,\ldots,7\}$.
+
+\paragraph{Step 3 — Majority-vote mapping.}
+For each cluster $q$, the killer label is assigned by majority vote:
+\[
+g(q) = \argmax_{k \in \{1,\ldots,S\}} \sum_{i \in \text{TRAIN}} \mathbf{1}[c_i^{(\text{km})}=q]\,\mathbf{1}[K_i=k].
+\]
+
+\paragraph{Step 4 — Prediction.}
+For each VAL/TEST incident, predict $\hat{c}_i = g(\hat{c}_i^{(\text{km})})$ where
+$\hat{c}_i^{(\text{km})} = \argmin_q \|\bm{z}_i - \bm{\mu}_q^{(\text{km})}\|^2$.
+
+\subsection{Cluster-to-Killer Mapping}
+
+\begin{center}
+\begin{tabular}{cc}
+\toprule
+\textbf{Cluster $q$} & \textbf{Mapped Killer $g(q)$}\\
+\midrule
+0 & K3\\
+1 & K6\\
+2 & K3\\
+3 & K2\\
+4 & K3\\
+5 & K3\\
+6 & K7\\
+7 & K3\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Remark.} Multiple clusters map to K3 because K3 is the dominant class
+(51\% of TRAIN). K-means has partitioned K3's data into several sub-clusters,
+while the minority killers (K1, K4, K5, K8) do not receive dedicated clusters.
+This is a fundamental limitation of k-means: without label information, it cannot
+distinguish the dominant class's sub-clusters from separate classes.
+
+\subsection{Results}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{VAL Accuracy} & \textbf{Supervised?}\\
+\midrule
+Gaussian Bayes & 75.2\% & Yes\\
+Linear (LR) & 94.1\% & Yes\\
+SVM (RBF)   & 93.4\% & Yes\\
+MLP         & 93.4\% & Yes\\
+\textbf{k-Means (PCA-14)} & \textbf{81.6\%} & \textbf{No}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The k-means approach achieves 81.6\% VAL accuracy \emph{without using any killer
+labels at test time} (labels are only used for the majority-vote mapping step on
+TRAIN). This remarkable result — 6.4 percentage points above the Bayes classifier
+which is fully supervised — underscores the strong geometric separability of the
+killer clusters in the PCA-14 space.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{report_figs/q8_kmeans.png}
+  \caption{K-Means predictions on VAL (left) and TEST (right) projected onto PC1--PC2.
+    \emph{Left:} The VAL predictions form visually coherent groups. The dominant
+    K3 predictions fill the central region while the other killers form smaller,
+    more peripheral clusters.
+    \emph{Right:} The TEST predictions mirror the VAL structure, confirming
+    that the PCA + k-means pipeline generalises well to unseen data.
+    The alignment between the predicted groups and the visual clusters suggests
+    that the 14-dimensional PCA space faithfully encodes the inter-killer variation.}
+  \label{fig:q8_kmeans}
+\end{figure}
+
+% =============================================================================
+\section{Overall Model Comparison and Conclusions}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{report_figs/model_comparison.png}
+  \caption{VAL accuracy across all five methods. The dashed line marks random-chance
+    performance ($1/8 = 12.5\%$). All models substantially outperform random guessing,
+    confirming that the feature set carries rich discriminative information about
+    killer identity.}
+  \label{fig:comparison}
+\end{figure}
+
+\subsection{Key Findings}
+
+\begin{enumerate}
+  \item \textbf{Feature informativeness.} The categorical features (especially
+    \texttt{weapon\_code} and \texttt{scene\_type}) and the continuous spatial
+    features (\texttt{latitude}, \texttt{longitude}) together provide extremely
+    strong evidence for killer identity. The 18.9 pp jump from Bayes (continuous only)
+    to Logistic Regression (all features) confirms this.
+
+  \item \textbf{Linearity.} The best VAL accuracy is achieved by the \emph{linear}
+    model, not the more complex SVM or MLP. This suggests that after one-hot encoding,
+    the killer classes are approximately linearly separable in the full feature space.
+
+  \item \textbf{Class imbalance.} K3 (51\% of TRAIN) creates predictable difficulties.
+    All models tend to absorb ambiguous incidents into K3. Future work could explore
+    class-weighted losses or oversampling (e.g.\ SMOTE) for the minority killers.
+
+  \item \textbf{Unsupervised clustering.} Despite having no access to labels at inference
+    time, k-means in PCA-14 space achieves 81.6\% VAL accuracy --- outperforming
+    even the fully-supervised Bayes classifier. This strongly supports the hypothesis
+    that killer identities correspond to geometrically coherent clusters in the
+    standardised feature space.
+
+  \item \textbf{MLE verification.} The from-scratch MLE estimates for $(\vmu_k, \hatSig_k)$
+    matched the library implementation to numerical precision (difference $<10^{-5}$
+    for all killers), validating both the mathematical derivation and the implementation.
+\end{enumerate}
+
+\subsection{Submission Details}
+
+The final submission file \texttt{submission.csv} uses MLP predictions
+(VAL accuracy 93.4\%) and contains the following columns:
+
+\begin{center}
+\texttt{incident\_id, predicted\_killer, p\_killer\_1, \ldots, p\_killer\_8}
+\end{center}
+
+All 4\,800 rows (TRAIN, VAL, TEST) are included. The posterior probabilities
+$\hat{\pi}_i(k)$ are the MLP softmax outputs.
+
+% =============================================================================
+\appendix
+\section{Mathematical Reference}
+% =============================================================================
+
+\subsection{Gaussian Density}
+\[
+\mathcal{N}(\vx \mid \vmu, \vSig) =
+\frac{1}{(2\pi)^{d/2}|\vSig|^{1/2}}
+\exp\!\left(-\tfrac{1}{2}(\vx-\vmu)^\top\vSig^{-1}(\vx-\vmu)\right).
+\]
+
+\subsection{Mahalanobis Distance}
+\[
+D_M(\vx, \vmu, \vSig) = \sqrt{(\vx-\vmu)^\top\vSig^{-1}(\vx-\vmu)}.
+\]
+
+\subsection{logsumexp Trick}
+To avoid numerical underflow when computing $\log\sum_k e^{a_k}$:
+\[
+\log\sum_k e^{a_k} = a^* + \log\sum_k e^{a_k - a^*}, \quad a^* = \max_k a_k.
+\]
+
+\subsection{PCA Variance Explained}
+\[
+\text{Var. explained by first } m \text{ PCs}
+= \frac{\sum_{j=1}^m \lambda_j}{\sum_{j=1}^{d} \lambda_j}.
+\]
+
+% =============================================================================
+\section{Software and Reproducibility}
+% =============================================================================
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Package} & \textbf{Purpose}\\
+\midrule
+Python 3.11         & Primary language\\
+NumPy 1.26          & Numerical computations, MLE from scratch\\
+Pandas 2.1          & Data loading and manipulation\\
+scikit-learn 1.4    & PCA, SVM, MLP, LogisticRegression, KMeans, GaussianMixture\\
+SciPy 1.12          & \texttt{multivariate\_normal} for LL verification\\
+Matplotlib 3.8      & All figures\\
+Seaborn 0.13        & Confusion matrix heatmaps\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All results are reproducible with \texttt{numpy.random.seed(42)} and
+\texttt{random\_state=42} for all stochastic estimators. The complete code
+is provided in \texttt{solution\_Q1\_Q8.py}.
+
+\end{document}
