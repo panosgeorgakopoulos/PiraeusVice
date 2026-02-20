@@ -21,7 +21,7 @@ import os
 
 np.random.seed(42)
 
-BASE_DIR = os.path.dirname(os.path.abspath(file))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 OUT = os.path.join(BASE_DIR, 'outputs') + os.sep
 DATA = os.path.join(BASE_DIR, 'crimes.csv')
