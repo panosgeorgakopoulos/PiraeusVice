@@ -17,10 +17,16 @@ from sklearn.mixture import GaussianMixture
 from sklearn.linear_model import LogisticRegression
 from scipy.stats import multivariate_normal
 import warnings; warnings.filterwarnings('ignore')
+import os
+
 np.random.seed(42)
 
-OUT = '/Users/panosgeorgakopoulos/PycharmProjects/PythonProject111/outputs'
-DATA = '/Users/panosgeorgakopoulos/PycharmProjects/PythonProject111/crimes.csv'
+BASE_DIR = os.path.dirname(os.path.abspath(file))
+
+OUT = os.path.join(BASE_DIR, 'outputs') + os.sep
+DATA = os.path.join(BASE_DIR, 'crimes.csv')
+
+os.makedirs(OUT, exist_ok=True)
 CONT = ['hour_float','latitude','longitude','victim_age','temp_c','humidity','dist_precinct_km','pop_density']
 CATS = ['weapon_code','scene_type','weather','vic_gender']
 S = 8
